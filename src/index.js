@@ -10,19 +10,71 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers;
+
+  const user = users.find(user => user.username === username);
+
+  if(!user){
+    return response.status(404).json({error: "User not found!"})
+  }
+
+
+  request.user = user;
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const {user} = request;
+  
+
+  if(user.pro === false && user.todos.length >= 10){
+    return response.status(403).json({error: "You're not a Pro User and have reached your limit of todos"})
+  }
+
+  
+
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers;
+  const {id} = request.params;
+
+  const user = users.find(user => {user.username === username});
+
+  if(!user){
+    return response.status(404).json({error: "User not found!"});
+  }
+
+  const regexExp = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/gi;
+
+  const checkTodo = user.todos.find(todo => todo.id === id);
+
+  if(!checkTodo){
+    return response.status(400).json({error: "Todo Not Found"});
+  }
+
+  const checkTodoID = regexExp.test(checkTodo.id);
+
+  if(!checkTodoID){
+    return response.status(400).json({error: "The Todo ID is not a UUID"});
+  }
+
+  request.todo = todo;
+  request.user = user;
+  return next();
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const {id} = request.params;
+  const user = users.find(user => user.id === id);
+
+  if(!user){
+    return response.status(404).json({error: 'User not found by ID'});
+  }
+
+  request.user = user;
+  return next();
 }
 
 app.post('/users', (request, response) => {
@@ -57,7 +109,7 @@ app.patch('/users/:id/pro', findUserById, (request, response) => {
   const { user } = request;
 
   if (user.pro) {
-    return response.status(400).json({ error: 'Pro plan is already activated.' });
+    return response.status(404).json({ error: 'Pro plan is already activated.' });
   }
 
   user.pro = true;
@@ -112,7 +164,7 @@ app.delete('/todos/:id', checksExistsUserAccount, checksTodoExists, (request, re
   const todoIndex = user.todos.indexOf(todo);
 
   if (todoIndex === -1) {
-    return response.status(404).json({ error: 'Todo not found' });
+    return response.status(204).json({ error: 'Todo not found' });
   }
 
   user.todos.splice(todoIndex, 1);
